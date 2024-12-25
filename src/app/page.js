@@ -105,7 +105,8 @@ export default function Home() {
 
       <div className="buttons">
         <button onClick={startTimer} className="button">Start</button>
-        <button onClick={stopTimer} className="button">Stop</button>
+        <button onClick={stopTimer} className="button">Pause</button>
+  
         <button onClick={resetTimer} className="button">Reset</button>
       </div>
     </div>
