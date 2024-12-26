@@ -1,20 +1,23 @@
 "use client";
 
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import "./globals.css";
 
 export default function Home() {
   const [time, setTime] = useState(0); // Default time in seconds
   const [isRunning, setIsRunning] = useState(false);
-  const [customTime, setCustomTime] = useState(""); // Input field value
+  const [hours, setHours] = useState(""); // Hours input
+  const [minutes, setMinutes] = useState(""); // Minutes input
+  const [seconds, setSeconds] = useState(""); // Seconds input
   const [errorMessage, setErrorMessage] = useState(""); // Error message state
   const timerRef = useRef(null);
 
-  // Format time as MM:SS
+  // Format time as HH:MM:SS
   const formatTime = (timeInSeconds) => {
-    const minutes = Math.floor(timeInSeconds / 60);
-    const seconds = timeInSeconds % 60;
-    return `${String(minutes).padStart(2, "0")}:${String(seconds).padStart(2, "0")}`;
+    const hrs = Math.floor(timeInSeconds / 3600);
+    const mins = Math.floor((timeInSeconds % 3600) / 60);
+    const secs = timeInSeconds % 60;
+    return `${String(hrs).padStart(2, "0")}:${String(mins).padStart(2, "0")}:${String(secs).padStart(2, "0")}`;
   };
 
   // Start the timer
@@ -47,66 +50,124 @@ export default function Home() {
     clearInterval(timerRef.current);
     setTime(0); // Reset to default 0 seconds
     setIsRunning(false);
+    setHours(""); // Clear hours input
+    setMinutes(""); // Clear minutes input
+    setSeconds(""); // Clear seconds input
+    setErrorMessage(""); // Clear any error messages
+    localStorage.clear(); // Clear persisted data
   };
 
-  // Handle custom time input
-  const handleCustomTimeChange = (e) => {
-    let value = e.target.value;
-
-    // Automatically insert ":" after 2 digits
-    if (value.length === 2 && !value.includes(":")) {
-      value = `${value}:`;
-    }
-
-    // Ensure the input is in the correct format MM:SS
-    if (value.length <= 5 && (/^\d{0,2}:?\d{0,2}$/.test(value))) {
-      setCustomTime(value);
-    }
-  };
-
+  // Handle custom time setting
   const setCustomTimer = () => {
-    const [minutes, seconds] = customTime.split(":").map((val) => parseInt(val, 10));
-    
-    // Check if seconds are valid and in the range of 0-59
-    if (!isNaN(minutes) && !isNaN(seconds) && seconds >= 0 && seconds < 60) {
-      setTime(minutes * 60 + seconds);
-      setCustomTime(""); // Clear input field after setting
+    const hrs = parseInt(hours || "0", 10);
+    const mins = parseInt(minutes || "0", 10);
+    const secs = parseInt(seconds || "0", 10);
+
+    if (
+      hrs >= 0 &&
+      mins >= 0 &&
+      mins < 60 &&
+      secs >= 0 &&
+      secs < 60
+    ) {
+      const totalTime = hrs * 3600 + mins * 60 + secs;
+      setTime(totalTime);
+      saveToLocalStorage(totalTime, true); // Save time and running state
       setErrorMessage(""); // Clear any previous error message
     } else {
-      setErrorMessage("Please enter a valid time in MM:SS format");
+      setErrorMessage("Please enter correct time format");
     }
   };
+
+  // Handle input change with validation for non-negative values
+  const handleInputChange = (e, setState) => {
+    const value = e.target.value;
+    if (/^\d*$/.test(value)) {
+      setState(value);
+    }
+  };
+
+  // Save state to localStorage
+  const saveToLocalStorage = (time, isRunning) => {
+    localStorage.setItem("timerTime", time);
+    localStorage.setItem("timerRunning", isRunning);
+    localStorage.setItem("startTime", Date.now());
+  };
+
+  // Retrieve state from localStorage on page load
+  useEffect(() => {
+    const savedTime = localStorage.getItem("timerTime");
+    const savedRunning = localStorage.getItem("timerRunning");
+    const startTime = localStorage.getItem("startTime");
+
+    if (savedTime && savedRunning) {
+      const timeElapsed = Math.floor((Date.now() - startTime) / 1000);
+      const remainingTime = Math.max(0, savedTime - timeElapsed);
+
+      setTime(remainingTime);
+
+      if (savedRunning === "true" && remainingTime > 0) {
+        setIsRunning(true);
+        timerRef.current = setInterval(() => {
+          setTime((prevTime) => {
+            if (prevTime <= 0) {
+              clearInterval(timerRef.current);
+              setIsRunning(false);
+              return 0;
+            }
+            return prevTime - 1;
+          });
+        }, 1000);
+      }
+    }
+  }, []);
+
+  // Persist the timer state whenever it changes
+  useEffect(() => {
+    if (isRunning) {
+      saveToLocalStorage(time, isRunning);
+    }
+  }, [time, isRunning]);
 
   return (
     <div className="container">
       <h1>Timer App</h1>
       <div className="timer-display">{formatTime(time)}</div>
 
-      {/* Input field for custom time */}
-      <div className="input-container">
+      {/* Input fields for hours, minutes, and seconds */}
+      <div className="input-container" ><div className="input-container2">
         <input
           type="text"
-          value={customTime}
-          onChange={handleCustomTimeChange}
-          placeholder="00:00"
+          value={hours}
+          onChange={(e) => handleInputChange(e, setHours)}
+          placeholder="00 h"
           className="input"
         />
+        <input
+          type="text"
+          value={minutes}
+          onChange={(e) => handleInputChange(e, setMinutes)}
+          placeholder="00 m"
+          className="input"
+        />
+        <input
+          type="text"
+          value={seconds}
+          onChange={(e) => handleInputChange(e, setSeconds)}
+          placeholder="00 s"
+          className="input"
+        /> </div>
         <button onClick={setCustomTimer} className="tbutton">
           Set Time
         </button>
-      </div>
+     </div>
 
       {/* Display error message */}
-      {errorMessage && (
-        <div className="error-message">
-          {errorMessage}
-        </div>
-      )}
+      {errorMessage && <div className="error-message">{errorMessage}</div>}
 
       <div className="buttons">
         <button onClick={startTimer} className="button">Start</button>
         <button onClick={stopTimer} className="button">Pause</button>
-  
         <button onClick={resetTimer} className="button">Reset</button>
       </div>
     </div>
