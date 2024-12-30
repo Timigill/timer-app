@@ -20,9 +20,12 @@ export default function Home() {
     return `${String(hrs).padStart(2, "0")}:${String(mins).padStart(2, "0")}:${String(secs).padStart(2, "0")}`;
   };
 
-  // Start the timer
-  const startTimer = () => {
-    if (!isRunning) {
+  // Start or pause the timer
+  const toggleTimer = () => {
+    if (isRunning) {
+      clearInterval(timerRef.current);
+      setIsRunning(false);
+    } else {
       setIsRunning(true);
       timerRef.current = setInterval(() => {
         setTime((prevTime) => {
@@ -34,14 +37,6 @@ export default function Home() {
           return prevTime - 1;
         });
       }, 1000);
-    }
-  };
-
-  // Stop the timer
-  const stopTimer = () => {
-    if (isRunning) {
-      clearInterval(timerRef.current);
-      setIsRunning(false);
     }
   };
 
@@ -63,13 +58,7 @@ export default function Home() {
     const mins = parseInt(minutes || "0", 10);
     const secs = parseInt(seconds || "0", 10);
 
-    if (
-      hrs >= 0 &&
-      mins >= 0 &&
-      mins < 60 &&
-      secs >= 0 &&
-      secs < 60
-    ) {
+    if (hrs >= 0 && mins >= 0 && mins < 60 && secs >= 0 && secs < 60) {
       const totalTime = hrs * 3600 + mins * 60 + secs;
       setTime(totalTime);
       saveToLocalStorage(totalTime, true); // Save time and running state
@@ -135,40 +124,45 @@ export default function Home() {
       <div className="timer-display">{formatTime(time)}</div>
 
       {/* Input fields for hours, minutes, and seconds */}
-      <div className="input-container" ><div className="input-container2">
-        <input
-          type="text"
-          value={hours}
-          onChange={(e) => handleInputChange(e, setHours)}
-          placeholder="00 h"
-          className="input"
-        />
-        <input
-          type="text"
-          value={minutes}
-          onChange={(e) => handleInputChange(e, setMinutes)}
-          placeholder="00 m"
-          className="input"
-        />
-        <input
-          type="text"
-          value={seconds}
-          onChange={(e) => handleInputChange(e, setSeconds)}
-          placeholder="00 s"
-          className="input"
-        /> </div>
+      <div className="input-container">
+        <div className="input-container2">
+          <input
+            type="text"
+            value={hours}
+            onChange={(e) => handleInputChange(e, setHours)}
+            placeholder="00 h"
+            className="input"
+          />
+          <input
+            type="text"
+            value={minutes}
+            onChange={(e) => handleInputChange(e, setMinutes)}
+            placeholder="00 m"
+            className="input"
+          />
+          <input
+            type="text"
+            value={seconds}
+            onChange={(e) => handleInputChange(e, setSeconds)}
+            placeholder="00 s"
+            className="input"
+          />
+        </div>
         <button onClick={setCustomTimer} className="tbutton">
           Set Time
         </button>
-     </div>
+      </div>
 
       {/* Display error message */}
       {errorMessage && <div className="error-message">{errorMessage}</div>}
 
       <div className="buttons">
-        <button onClick={startTimer} className="button">Start</button>
-        <button onClick={stopTimer} className="button">Pause</button>
-        <button onClick={resetTimer} className="button">Reset</button>
+        <button onClick={toggleTimer} className="button">
+          {isRunning ? "Pause" : "Start"}
+        </button>
+        <button onClick={resetTimer} className="button">
+          Reset
+        </button>
       </div>
     </div>
   );
